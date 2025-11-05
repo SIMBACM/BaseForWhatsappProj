@@ -1,6 +1,7 @@
 const { sendTextMessage } = require('./whatsappService');
 const conversationManager = require('./conversationManager');
 const { getTemplate } = require('../utils/messageTemplates');
+const supabaseStorageService = require('./supabaseStorageService');
 
 /**
  * Process incoming webhook payload from WhatsApp Business API
@@ -144,18 +145,95 @@ async function handleImageCollection(message, userPhone, session) {
     return;
   }
 
-  const imageUrl = message.image.id; // WhatsApp image ID
-  console.log(`📸 Collected image: ${imageUrl} from ${userPhone}`);
+  const whatsappImageId = message.image.id; // WhatsApp image ID
+  console.log(`📸 Collected image: ${whatsappImageId} from ${userPhone}`);
   
-  // Update session with image URL
-  await conversationManager.updateSession(userPhone, { profileImageUrl: imageUrl });
+  // Update session with WhatsApp image ID first
+  await conversationManager.updateSession(userPhone, { 
+    whatsappImageId: whatsappImageId,
+    profileImageUrl: null // Will be updated after Supabase upload
+  });
   
-  // Complete the session (this will save to database and log the data)
-  const completedSession = await conversationManager.completeSession(userPhone);
-  
-  // Send completion message
-  const response = getTemplate('completed', completedSession.name);
+  // Send immediate response to user
+  const response = getTemplate('completed', session.name);
   await sendTextMessage(userPhone, response);
+  
+  // Process image upload in background (don't wait for completion)
+  processImageUploadAsync(whatsappImageId, userPhone, session);
+}
+
+/**
+ * Process image upload to Supabase Storage asynchronously
+ * This runs in the background after user receives completion message
+ */
+async function processImageUploadAsync(whatsappImageId, userPhone, session) {
+  try {
+    console.log(`🔄 Starting background image processing for ${userPhone}`);
+    
+    // Complete the session first (this creates the feedback record)
+    const completedSession = await conversationManager.completeSession(userPhone);
+    
+    if (!completedSession) {
+      console.error(`❌ No session found to complete for ${userPhone}`);
+      return;
+    }
+    
+    // Get the feedback ID from the database (we need this for the filename)
+    const prismaService = require('./prismaService');
+    const recentFeedback = await prismaService.prisma.feedback.findFirst({
+      where: {
+        userPhone: userPhone
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+    
+    if (!recentFeedback) {
+      console.error(`❌ No feedback record found for ${userPhone}`);
+      return;
+    }
+    
+    // Upload image to Supabase Storage
+    console.log(`📤 Uploading image to Supabase for feedback ID: ${recentFeedback.id}`);
+    const uploadResult = await supabaseStorageService.uploadWhatsAppImage(
+      whatsappImageId, 
+      userPhone, 
+      recentFeedback.id
+    );
+    
+    if (uploadResult.success) {
+      // Update feedback record with Supabase image URL
+      await prismaService.prisma.feedback.update({
+        where: {
+          id: recentFeedback.id
+        },
+        data: {
+          profileImageUrl: uploadResult.publicUrl,
+          whatsappImageId: whatsappImageId,
+          imageStoragePath: uploadResult.filePath
+        }
+      });
+      
+      console.log(`✅ Image processing completed for ${userPhone}: ${uploadResult.publicUrl}`);
+    } else {
+      console.error(`❌ Image upload failed for ${userPhone}:`, uploadResult.error);
+      
+      // Update feedback record with error info
+      await prismaService.prisma.feedback.update({
+        where: {
+          id: recentFeedback.id
+        },
+        data: {
+          whatsappImageId: whatsappImageId,
+          profileImageUrl: `error: ${uploadResult.error}`
+        }
+      });
+    }
+    
+  } catch (error) {
+    console.error(`❌ Error in background image processing for ${userPhone}:`, error);
+  }
 }
 
 

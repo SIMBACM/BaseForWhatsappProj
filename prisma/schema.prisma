@@ -15,28 +15,31 @@ datasource db {
 // WhatsApp Feedback Collection Models
 
 model Feedback {
-  id            Int      @id @default(autoincrement())
-  userPhone     String   @map("user_phone")
-  name          String
-  feedback      String   @db.Text
-  profileImageUrl String? @map("profile_image_url")
-  sessionDuration Int?   @map("session_duration") // in seconds
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id                Int      @id @default(autoincrement())
+  userPhone         String   @map("user_phone")
+  name              String
+  feedback          String   @db.Text
+  profileImageUrl   String?  @map("profile_image_url")        // Supabase public URL
+  whatsappImageId   String?  @map("whatsapp_image_id")        // Original WhatsApp image ID
+  imageStoragePath  String?  @map("image_storage_path")       // Supabase storage path
+  sessionDuration   Int?     @map("session_duration")         // in seconds
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   @@map("feedbacks")
 }
 
 model ConversationSession {
-  id            String   @id @default(cuid())
-  userPhone     String   @unique @map("user_phone")
-  step          Int      @default(1)
-  name          String?
-  feedback      String?  @db.Text
-  profileImageUrl String? @map("profile_image_url")
-  createdAt     DateTime @default(now()) @map("created_at")
-  lastActivity  DateTime @default(now()) @map("last_activity")
-  isCompleted   Boolean  @default(false) @map("is_completed")
+  id              String   @id @default(cuid())
+  userPhone       String   @unique @map("user_phone")
+  step            Int      @default(1)
+  name            String?
+  feedback        String?  @db.Text
+  whatsappImageId String?  @map("whatsapp_image_id")    // WhatsApp image ID (before processing)
+  profileImageUrl String?  @map("profile_image_url")    // Final Supabase URL (after processing)
+  createdAt       DateTime @default(now()) @map("created_at")
+  lastActivity    DateTime @default(now()) @map("last_activity")
+  isCompleted     Boolean  @default(false) @map("is_completed")
 
   @@map("conversation_sessions")
 }

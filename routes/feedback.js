@@ -198,4 +198,105 @@ router.post('/cleanup-sessions', async (req, res) => {
   }
 });
 
+// Get storage statistics
+router.get('/storage/stats', async (req, res) => {
+  try {
+    const supabaseStorageService = require('../services/supabaseStorageService');
+    const stats = await supabaseStorageService.getStorageStats();
+    
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('Error getting storage stats:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get storage statistics'
+    });
+  }
+});
+
+// Test storage connectivity
+router.get('/storage/test', async (req, res) => {
+  try {
+    const supabaseStorageService = require('../services/supabaseStorageService');
+    const testResult = await supabaseStorageService.testStorage();
+    
+    res.json({
+      success: testResult.success,
+      data: testResult
+    });
+  } catch (error) {
+    console.error('Error testing storage:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to test storage'
+    });
+  }
+});
+
+// Reprocess image for a specific feedback (admin endpoint)
+router.post('/:id/reprocess-image', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const supabaseStorageService = require('../services/supabaseStorageService');
+    
+    // Get feedback record
+    const feedback = await prismaService.prisma.feedback.findUnique({
+      where: { id: parseInt(id) }
+    });
+    
+    if (!feedback) {
+      return res.status(404).json({
+        success: false,
+        error: 'Feedback not found'
+      });
+    }
+    
+    if (!feedback.whatsappImageId) {
+      return res.status(400).json({
+        success: false,
+        error: 'No WhatsApp image ID found for this feedback'
+      });
+    }
+    
+    // Reprocess the image
+    const uploadResult = await supabaseStorageService.uploadWhatsAppImage(
+      feedback.whatsappImageId,
+      feedback.userPhone,
+      feedback.id
+    );
+    
+    if (uploadResult.success) {
+      // Update feedback record
+      await prismaService.prisma.feedback.update({
+        where: { id: feedback.id },
+        data: {
+          profileImageUrl: uploadResult.publicUrl,
+          imageStoragePath: uploadResult.filePath
+        }
+      });
+      
+      res.json({
+        success: true,
+        message: 'Image reprocessed successfully',
+        imageUrl: uploadResult.publicUrl
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: uploadResult.error
+      });
+    }
+    
+  } catch (error) {
+    console.error('Error reprocessing image:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to reprocess image'
+    });
+  }
+});
+
 module.exports = router;
