@@ -1,18 +1,19 @@
 /**
  * Conversation State Manager for WhatsApp Feedback Collection
- * Manages user sessions and conversation flow state
+ * Manages user sessions and conversation flow state using Prisma database
  */
+
+const prismaService = require('./prismaService');
 
 class ConversationStateManager {
   constructor() {
-    this.sessions = new Map(); // userPhone -> sessionData
     this.sessionTimeout = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
     this.cleanupInterval = 60 * 60 * 1000; // 1 hour in milliseconds
     
     // Start automatic cleanup timer
     this.startCleanupTimer();
     
-    console.log('🔄 ConversationStateManager initialized with 12-hour session timeout');
+    console.log('🔄 ConversationStateManager initialized with Prisma database and 12-hour session timeout');
   }
 
   /**
@@ -20,17 +21,17 @@ class ConversationStateManager {
    * @param {string} userPhone - User's phone number
    * @returns {object} New session data
    */
-  createSession(userPhone) {
-    const session = {
+  async createSession(userPhone) {
+    const sessionData = {
+      userPhone,
       step: 1,
-      name: '',
-      feedback: '',
-      profileImageUrl: '',
-      createdAt: new Date(),
-      lastActivity: new Date()
+      name: null,
+      feedback: null,
+      profileImageUrl: null,
+      isCompleted: false
     };
     
-    this.sessions.set(userPhone, session);
+    const session = await prismaService.saveConversationSession(sessionData);
     console.log(`📱 Created new session for ${userPhone} at step 1`);
     
     return session;
@@ -41,22 +42,25 @@ class ConversationStateManager {
    * @param {string} userPhone - User's phone number
    * @returns {object} Session data
    */
-  getSession(userPhone) {
-    let session = this.sessions.get(userPhone);
+  async getSession(userPhone) {
+    let session = await prismaService.getConversationSession(userPhone);
     
     // Check if session exists and is not expired
     if (session && this.isSessionExpired(session)) {
       console.log(`⏰ Session expired for ${userPhone}, creating new session`);
-      this.sessions.delete(userPhone);
+      await prismaService.deleteConversationSession(userPhone);
       session = null;
     }
     
     // Create new session if none exists or expired
     if (!session) {
-      session = this.createSession(userPhone);
+      session = await this.createSession(userPhone);
     } else {
       // Update last activity
-      session.lastActivity = new Date();
+      await prismaService.saveConversationSession({
+        ...session,
+        lastActivity: new Date()
+      });
       console.log(`📱 Retrieved existing session for ${userPhone} at step ${session.step}`);
     }
     
@@ -69,17 +73,22 @@ class ConversationStateManager {
    * @param {object} updates - Data to update
    * @returns {object} Updated session data
    */
-  updateSession(userPhone, updates) {
-    const session = this.sessions.get(userPhone);
+  async updateSession(userPhone, updates) {
+    let session = await prismaService.getConversationSession(userPhone);
     
     if (!session) {
       console.error(`❌ Attempted to update non-existent session for ${userPhone}`);
-      return this.createSession(userPhone);
+      return await this.createSession(userPhone);
     }
     
     // Update session data
-    Object.assign(session, updates, { lastActivity: new Date() });
+    const updatedSessionData = {
+      ...session,
+      ...updates,
+      lastActivity: new Date()
+    };
     
+    session = await prismaService.saveConversationSession(updatedSessionData);
     console.log(`📝 Updated session for ${userPhone}:`, updates);
     
     return session;
@@ -90,11 +99,11 @@ class ConversationStateManager {
    * @param {string} userPhone - User's phone number
    * @returns {object} Updated session data
    */
-  advanceStep(userPhone) {
-    const session = this.getSession(userPhone);
+  async advanceStep(userPhone) {
+    const session = await this.getSession(userPhone);
     const nextStep = Math.min(session.step + 1, 4);
     
-    return this.updateSession(userPhone, { step: nextStep });
+    return await this.updateSession(userPhone, { step: nextStep });
   }
 
   /**
@@ -102,20 +111,39 @@ class ConversationStateManager {
    * @param {string} userPhone - User's phone number
    * @returns {object} Final session data before removal
    */
-  completeSession(userPhone) {
-    const session = this.sessions.get(userPhone);
+  async completeSession(userPhone) {
+    const session = await prismaService.getConversationSession(userPhone);
     
     if (!session) {
       console.error(`❌ Attempted to complete non-existent session for ${userPhone}`);
       return null;
     }
     
-    // Log completion data
-    this.logCompletedFeedback(userPhone, session);
+    // Calculate session duration
+    const sessionDuration = Math.round((new Date() - new Date(session.createdAt)) / 1000);
     
-    // Remove session from memory
-    this.sessions.delete(userPhone);
-    console.log(`✅ Completed and removed session for ${userPhone}`);
+    // Save feedback to database
+    const feedbackData = {
+      userPhone: session.userPhone,
+      name: session.name,
+      feedback: session.feedback,
+      profileImageUrl: session.profileImageUrl,
+      sessionDuration
+    };
+    
+    await prismaService.saveFeedback(feedbackData);
+    
+    // Log completion data to console (for backward compatibility)
+    this.logCompletedFeedback(userPhone, { ...session, sessionDuration });
+    
+    // Mark session as completed and remove from active sessions
+    await prismaService.saveConversationSession({
+      ...session,
+      isCompleted: true
+    });
+    await prismaService.deleteConversationSession(userPhone);
+    
+    console.log(`✅ Completed and saved feedback for ${userPhone}`);
     
     return session;
   }
@@ -127,7 +155,7 @@ class ConversationStateManager {
    */
   isSessionExpired(session) {
     const now = new Date();
-    const timeDiff = now - session.lastActivity;
+    const timeDiff = now - new Date(session.lastActivity);
     return timeDiff > this.sessionTimeout;
   }
 
@@ -135,39 +163,18 @@ class ConversationStateManager {
    * Get session statistics
    * @returns {object} Session statistics
    */
-  getSessionStats() {
-    const totalSessions = this.sessions.size;
-    const sessionsByStep = {};
-    
-    for (const session of this.sessions.values()) {
-      const step = session.step;
-      sessionsByStep[step] = (sessionsByStep[step] || 0) + 1;
-    }
-    
-    return {
-      totalActiveSessions: totalSessions,
-      sessionsByStep,
-      timestamp: new Date().toISOString()
-    };
+  async getSessionStats() {
+    return await prismaService.getFeedbackStats();
   }
 
   /**
    * Clean up expired sessions
    */
-  cleanupExpiredSessions() {
-    const now = new Date();
-    let cleanedCount = 0;
-    
-    for (const [userPhone, session] of this.sessions.entries()) {
-      if (this.isSessionExpired(session)) {
-        this.sessions.delete(userPhone);
-        cleanedCount++;
-        console.log(`🧹 Cleaned up expired session for ${userPhone}`);
-      }
-    }
+  async cleanupExpiredSessions() {
+    const cleanedCount = await prismaService.cleanupExpiredSessions(12);
     
     if (cleanedCount > 0) {
-      console.log(`🧹 Cleanup completed: Removed ${cleanedCount} expired sessions`);
+      console.log(`🧹 Cleanup completed: Removed ${cleanedCount} expired sessions from database`);
     }
     
     return cleanedCount;
@@ -177,8 +184,8 @@ class ConversationStateManager {
    * Start automatic cleanup timer
    */
   startCleanupTimer() {
-    setInterval(() => {
-      this.cleanupExpiredSessions();
+    setInterval(async () => {
+      await this.cleanupExpiredSessions();
     }, this.cleanupInterval);
     
     console.log('⏰ Started automatic session cleanup timer (runs every hour)');
@@ -214,13 +221,13 @@ class ConversationStateManager {
    * @param {string} userPhone - User's phone number
    * @returns {object} Reset session data
    */
-  resetSession(userPhone) {
+  async resetSession(userPhone) {
     console.log(`🔄 Resetting session for ${userPhone} to step 1`);
-    return this.updateSession(userPhone, {
+    return await this.updateSession(userPhone, {
       step: 1,
-      name: '',
-      feedback: '',
-      profileImageUrl: ''
+      name: null,
+      feedback: null,
+      profileImageUrl: null
     });
   }
 }

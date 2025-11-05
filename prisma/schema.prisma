@@ -1,0 +1,42 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// WhatsApp Feedback Collection Models
+
+model Feedback {
+  id            Int      @id @default(autoincrement())
+  userPhone     String   @map("user_phone")
+  name          String
+  feedback      String   @db.Text
+  profileImageUrl String? @map("profile_image_url")
+  sessionDuration Int?   @map("session_duration") // in seconds
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("feedbacks")
+}
+
+model ConversationSession {
+  id            String   @id @default(cuid())
+  userPhone     String   @unique @map("user_phone")
+  step          Int      @default(1)
+  name          String?
+  feedback      String?  @db.Text
+  profileImageUrl String? @map("profile_image_url")
+  createdAt     DateTime @default(now()) @map("created_at")
+  lastActivity  DateTime @default(now()) @map("last_activity")
+  isCompleted   Boolean  @default(false) @map("is_completed")
+
+  @@map("conversation_sessions")
+}
