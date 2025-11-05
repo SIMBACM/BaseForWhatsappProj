@@ -6,6 +6,7 @@ require('dotenv').config();
 
 const webhookRoutes = require('./routes/webhook');
 const whatsappRoutes = require('./routes/whatsapp');
+const feedbackRoutes = require('./routes/feedback');
 
 const app = express();
 
@@ -101,6 +102,7 @@ app.get('/api/proxy/flow-json', async (req, res) => {
 // API routes
 app.use('/webhook', webhookRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/feedback', feedbackRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -110,6 +112,7 @@ app.get('/', (req, res) => {
     endpoints: {
       webhook: '/webhook',
       whatsapp: '/api/whatsapp',
+      feedback: '/api/feedback',
       health: '/health'
     },
     description: 'WhatsApp Business API backend for collecting user feedback through conversation flow'

@@ -44,7 +44,7 @@ async function handleIncomingMessage(message) {
       
       if (messageText === 'hi') {
         console.log(`👋 Starting feedback collection for ${userPhone}`);
-        const session = conversationManager.createSession(userPhone);
+        const session = await conversationManager.createSession(userPhone);
         const response = getTemplate('greeting');
         await sendTextMessage(userPhone, response);
         return;
@@ -52,7 +52,7 @@ async function handleIncomingMessage(message) {
     }
 
     // Get current session
-    const session = conversationManager.getSession(userPhone);
+    const session = await conversationManager.getSession(userPhone);
     
     // Process message based on current conversation step
     switch (session.step) {
@@ -68,7 +68,7 @@ async function handleIncomingMessage(message) {
       default:
         // Invalid step, reset to beginning
         console.log(`❌ Invalid step ${session.step} for ${userPhone}, resetting`);
-        conversationManager.resetSession(userPhone);
+        await conversationManager.resetSession(userPhone);
         const response = getTemplate('greeting');
         await sendTextMessage(userPhone, response);
     }
@@ -102,8 +102,8 @@ async function handleNameCollection(message, userPhone, session) {
   console.log(`📝 Collected name: "${name}" from ${userPhone}`);
   
   // Update session with name and advance to step 2
-  conversationManager.updateSession(userPhone, { name });
-  conversationManager.advanceStep(userPhone);
+  await conversationManager.updateSession(userPhone, { name });
+  await conversationManager.advanceStep(userPhone);
   
   // Send personalized response
   const response = getTemplate('nameReceived', name);
@@ -125,8 +125,8 @@ async function handleFeedbackCollection(message, userPhone, session) {
   console.log(`💬 Collected feedback: "${feedback.substring(0, 50)}..." from ${userPhone}`);
   
   // Update session with feedback and advance to step 3
-  conversationManager.updateSession(userPhone, { feedback });
-  conversationManager.advanceStep(userPhone);
+  await conversationManager.updateSession(userPhone, { feedback });
+  await conversationManager.advanceStep(userPhone);
   
   // Ask for profile picture
   const response = getTemplate('feedbackReceived');
@@ -148,10 +148,10 @@ async function handleImageCollection(message, userPhone, session) {
   console.log(`📸 Collected image: ${imageUrl} from ${userPhone}`);
   
   // Update session with image URL
-  conversationManager.updateSession(userPhone, { profileImageUrl: imageUrl });
+  await conversationManager.updateSession(userPhone, { profileImageUrl: imageUrl });
   
-  // Complete the session (this will log the data and remove session)
-  const completedSession = conversationManager.completeSession(userPhone);
+  // Complete the session (this will save to database and log the data)
+  const completedSession = await conversationManager.completeSession(userPhone);
   
   // Send completion message
   const response = getTemplate('completed', completedSession.name);
