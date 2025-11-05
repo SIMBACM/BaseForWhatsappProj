@@ -5,11 +5,7 @@ const morgan = require('morgan');
 require('dotenv').config();
 
 const webhookRoutes = require('./routes/webhook');
-const triggerRoutes = require('./routes/triggers');
 const whatsappRoutes = require('./routes/whatsapp');
-const messageLibraryRoutes = require('./routes/messageLibrary');
-const drawsRoutes = require('./routes/draws');
-const adminsRoutes = require('./routes/admins');
 
 const app = express();
 
@@ -104,24 +100,19 @@ app.get('/api/proxy/flow-json', async (req, res) => {
 
 // API routes
 app.use('/webhook', webhookRoutes);
-app.use('/api/triggers', triggerRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
-app.use('/api/message-library', messageLibraryRoutes);
-app.use('/api/draws', drawsRoutes);
-app.use('/api/admins', adminsRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
-    message: 'WhatsApp Webhook Server is running!',
+    message: 'WhatsApp Feedback Collection Server is running!',
     version: require('./package.json').version,
     endpoints: {
       webhook: '/webhook',
-      triggers: '/api/triggers',
       whatsapp: '/api/whatsapp',
-      messageLibrary: '/api/message-library',
       health: '/health'
-    }
+    },
+    description: 'WhatsApp Business API backend for collecting user feedback through conversation flow'
   });
 });
 

@@ -1,143 +1,107 @@
-# WhatsApp Business API Backend
+# WhatsApp Feedback Collection System
 
-A comprehensive Node.js backend server for WhatsApp Business API webhook handling, intelligent flow automation, and message processing with trigger-based responses.
+A streamlined Node.js backend server for collecting user feedback through WhatsApp Business API. The system guides users through a simple 4-step conversation flow to collect their name, feedback, and profile picture.
 
-## 🌟 **Complete WhatsApp Flow Builder System**
+## 🌟 **Feedback Collection Workflow**
 
-This backend is part of a **complete WhatsApp automation ecosystem** that includes:
+This system creates a simple, conversational feedback collection experience:
 
-### **📊 Frontend Flow Builder Dashboard**
-
-- **Live URL**: [https://whatsapp-flow-builder-production.up.railway.app](https://whatsapp-flow-builder-production.up.railway.app)
-- **Purpose**: Visual interface to create, manage, and monitor WhatsApp automation triggers
-- **Features**:
-  - 🎨 **Visual Trigger Builder** - Create keyword-based automation rules
-  - 📱 **Flow Management** - Connect triggers to WhatsApp Flows
-  - 📊 **Real-time Analytics** - Monitor trigger performance and usage
-  - ⚙️ **Configuration Panel** - Manage WhatsApp Business API settings
-  - 🧪 **Testing Interface** - Test triggers and flows before deployment
-
-### **🔗 Backend API Server** (This Repository)
-
-- **Live URL**: [https://whatsappbackend-production-8946.up.railway.app](https://whatsappbackend-production-8946.up.railway.app)
-- **Purpose**: Process webhooks, execute triggers, and handle WhatsApp API integration
-- **Features**:
-  - 📨 **Webhook Processing** - Receive and process WhatsApp messages
-  - 🤖 **Intelligent Triggers** - Match keywords to automated responses
-  - 📡 **WhatsApp API Integration** - Send messages and interactive flows
-  - 💾 **Data Processing** - Handle form submissions and user data
-
-### **🔄 Complete Workflow:**
+### **📱 User Experience Flow:**
 
 ```
-Frontend Dashboard                    Backend Server                     WhatsApp
-      ↓                                    ↓                              ↓
-1. Create trigger                    2. Store trigger config          3. User sends message
-   "hello" → Flow ID                    in memory/database                 "hello" to business
-      ↓                                    ↓                              ↓
-4. Configure flow message           5. Webhook receives message       6. Match trigger keyword
-   "complete karo"                      from WhatsApp API                 "hello" found!
-      ↓                                    ↓                              ↓
-7. Send interactive flow            8. User receives message          9. User completes form
-   with "Open Form" button             with flow button                  and submits data
-      ↓                                    ↓                              ↓
-10. Process form response          11. Analytics updated              12. Automation complete
-    store data/trigger actions         in dashboard                       workflow success!
+User sends "hi" → Bot: "Hello! May I know your name?"
+      ↓
+User: "John Doe" → Bot: "Nice to meet you, John! Please share your feedback."
+      ↓  
+User: "Great service!" → Bot: "Got it! Please send your profile picture 📸"
+      ↓
+User: [sends image] → Bot: "Thank you, John! Your feedback has been received."
 ```
 
-### **🎯 End-to-End Automation Example:**
+### **🔄 System Workflow:**
 
-1. **Dashboard**: Create trigger `"register" → Flow ID: 123456789`
-2. **User Action**: Customer sends "register" to your WhatsApp Business number
-3. **Backend**: Receives webhook, matches trigger, sends flow message
-4. **Customer**: Gets "Please complete registration" + [Open Form] button
-5. **Interaction**: Customer clicks button, fills form, submits
-6. **Processing**: Backend processes form data, updates analytics
-7. **Dashboard**: Shows successful trigger execution and form completion
+```
+WhatsApp Message → Webhook → Conversation Manager → Response Generator → WhatsApp API
+      ↓                ↓              ↓                    ↓              ↓
+1. User sends "hi"  2. Process    3. Track session    4. Generate      5. Send reply
+                      webhook       state (step 1-4)    appropriate      to user
+                                                        response
+```
+
+### **💾 Data Collection:**
+
+The system collects and logs:
+- **Name**: User's provided name
+- **Feedback**: User's review or feedback text  
+- **Profile Image**: WhatsApp image URL
+- **Session Data**: Timestamps and duration
 
 ---
 
 ## 🎯 **System Overview**
 
-This backend creates an **intelligent WhatsApp automation system** that:
+This backend creates a **conversational feedback collection system** that:
 
 - **Listens for incoming WhatsApp messages** via webhooks
-- **Matches keywords to predefined triggers**
-- **Automatically sends interactive flow messages** as responses
-- **Handles flow completions and user data** collection
-- **Provides real-time monitoring and logging**
+- **Guides users through a 4-step conversation flow**
+- **Collects name, feedback, and profile picture**
+- **Manages session state with 12-hour timeout**
+- **Logs collected data to console for processing**
 
 ## 🏗️ **Architecture & Flow**
 
-### **Frontend + Backend Integration:**
-
-The **Flow Builder Dashboard** and this **Backend API** work together seamlessly:
+### **Core Components:**
 
 ```
-Flow Builder Dashboard                 Backend API Server
-        ↓                                    ↓
-📊 Visual trigger management          📨 Webhook processing
-⚙️ Configuration interface           🤖 Trigger execution
-📈 Real-time analytics              📡 WhatsApp API integration
-🧪 Testing and preview              💾 Data processing
-        ↓                                    ↓
-   Unified system for complete WhatsApp automation
+Webhook Handler → Conversation Manager → Message Templates → WhatsApp API
+      ↓                    ↓                   ↓              ↓
+Receives messages    Tracks user sessions   Generates       Sends responses
+from WhatsApp       (step 1-4 progress)    appropriate     back to users
+                                           responses
 ```
 
-### **API Communication:**
-
-- **Dashboard** ←→ **Backend**: REST API calls for trigger CRUD operations
-- **WhatsApp** → **Backend**: Webhooks for incoming messages
-- **Backend** → **WhatsApp**: API calls for sending flows and messages
-- **Backend** → **Dashboard**: Real-time updates and analytics
-
-### **Complete Automation Flow:**
+### **Conversation Flow:**
 
 ```
-📱 User sends "hello" → WhatsApp Business Number
+📱 User: "hi" → Step 1: Collect Name
      ↓
-🌐 WhatsApp → Sends webhook → Your Railway Backend
+📝 User: "John" → Step 2: Collect Feedback  
      ↓
-🔍 Backend → Finds "hello" trigger → Flow ID: 772936888895590
+💬 User: "Great!" → Step 3: Collect Image
      ↓
-🤖 Backend → Sends interactive flow → "complete karo" message
-     ↓
-📋 User → Clicks "Open Form" → Opens WhatsApp Flow
-     ↓
-✅ User → Completes form → Data sent back to webhook
-     ↓
-💾 Backend → Processes form data → Saves/responds accordingly
+📸 User: [image] → Step 4: Complete & Log Data
 ```
 
 ### **Key Components:**
 
-- **Webhook Handler** (`routes/webhook.js`) - Receives WhatsApp events
-- **Trigger Service** (`services/triggerService.js`) - Matches keywords to flows
-- **WhatsApp Service** (`services/whatsappService.js`) - Sends messages and flows
-- **Flow Processor** (`services/webhookService.js`) - Handles form responses
-- **Message Library** (`routes/messageLibrary.js` + `services/messageLibraryService.js`) - Centralized store for reusable message templates and content blocks. Keeps responses consistent across triggers and flows and makes it easy to update messages in one place.
+- **Webhook Handler** (`routes/webhook.js`) - Receives WhatsApp events and test endpoints
+- **Conversation Manager** (`services/conversationManager.js`) - Manages user sessions and state
+- **Webhook Service** (`services/webhookService.js`) - Processes messages and handles conversation flow
+- **WhatsApp Service** (`services/whatsappService.js`) - Sends text messages via WhatsApp API
+- **Message Templates** (`utils/messageTemplates.js`) - Centralized message templates
 
 ## 🚀 **Features**
 
-### 🔄 **Intelligent Automation**
+### 💬 **Conversation Management**
 
-- **Keyword Triggers**: Match incoming messages to predefined actions
-- **Flow Deployment**: Send interactive WhatsApp Flows automatically
-- **Form Processing**: Handle user submissions and responses
-- **Multi-trigger Support**: Different keywords trigger different flows
+- **4-Step Flow**: Name → Feedback → Image → Completion
+- **Session Tracking**: Individual user progress with 12-hour timeout
+- **Input Validation**: Ensures correct message types at each step
+- **Error Recovery**: Graceful handling of wrong input types
 
 ### 🔒 **Security & Reliability**
 
 - **Webhook Verification**: Secure Meta webhook validation
-- **CORS Protection**: Frontend integration security
+- **CORS Protection**: Configurable CORS for development
 - **Error Handling**: Comprehensive error logging and recovery
 - **Production Ready**: Railway deployment with 0.0.0.0 binding
 
-### 📊 **Monitoring & Debugging**
+### 📊 **Data Collection & Logging**
 
-- **Real-time Logs**: Track all webhook events and responses
-- **Health Endpoints**: Monitor system status and uptime
-- **Trigger Analytics**: Track usage counts and performance
+- **Console Logging**: Structured JSON output of collected feedback
+- **Session Management**: Automatic cleanup of expired sessions
+- **Test Endpoints**: Comprehensive testing and debugging tools
+- **Health Monitoring**: System status and uptime tracking
 
 ## 📋 **Prerequisites**
 
