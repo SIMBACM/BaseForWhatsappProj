@@ -18,14 +18,24 @@ class PrismaService {
    */
   async saveFeedback(feedbackData) {
     try {
-      const { userPhone, name, feedback, profileImageUrl, sessionDuration } = feedbackData;
+      const { 
+        userPhone, 
+        name, 
+        feedback, 
+        profileImageUrl, 
+        whatsappImageId, 
+        imageStoragePath, 
+        sessionDuration 
+      } = feedbackData;
       
       const savedFeedback = await this.prisma.feedback.create({
         data: {
           userPhone,
           name,
           feedback,
-          profileImageUrl,
+          profileImageUrl: profileImageUrl || null,
+          whatsappImageId: whatsappImageId || null,
+          imageStoragePath: imageStoragePath || null,
           sessionDuration: sessionDuration || null
         }
       });
@@ -94,7 +104,15 @@ class PrismaService {
    */
   async saveConversationSession(sessionData) {
     try {
-      const { userPhone, step, name, feedback, profileImageUrl, isCompleted } = sessionData;
+      const { 
+        userPhone, 
+        step, 
+        name, 
+        feedback, 
+        whatsappImageId, 
+        profileImageUrl, 
+        isCompleted 
+      } = sessionData;
       
       const savedSession = await this.prisma.conversationSession.upsert({
         where: {
@@ -104,6 +122,7 @@ class PrismaService {
           step,
           name: name || null,
           feedback: feedback || null,
+          whatsappImageId: whatsappImageId || null,
           profileImageUrl: profileImageUrl || null,
           lastActivity: new Date(),
           isCompleted: isCompleted || false
@@ -113,6 +132,7 @@ class PrismaService {
           step,
           name: name || null,
           feedback: feedback || null,
+          whatsappImageId: whatsappImageId || null,
           profileImageUrl: profileImageUrl || null,
           isCompleted: isCompleted || false
         }
